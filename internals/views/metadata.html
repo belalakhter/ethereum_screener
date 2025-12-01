@@ -1,0 +1,51 @@
+{{define "metadata"}}
+<div
+    class="bg-blue-900 text-white mx-[60px] mt-40 p-6 rounded-2xl shadow-lg border border-blue-700"
+>
+    <h2 class="text-2xl font-bold mb-4 border-b border-blue-600 pb-2">
+        Token Overview
+    </h2>
+    <div class="grid grid-cols-2 gap-4">
+        <div>
+            <p class="text-sm text-gray-300">Name</p>
+            <p class="font-semibold text-lg">{{ .Name }}</p>
+        </div>
+        <div>
+            <p class="text-sm text-gray-300">Symbol</p>
+            <p class="font-semibold text-lg">{{ .Symbol }}</p>
+        </div>
+        <div>
+            <p class="text-sm text-gray-300">Price</p>
+            <p class="font-semibold text-lg">WETH {{ .Price }}</p>
+        </div>
+        <div>
+            <p class="text-sm text-gray-300">Market Cap</p>
+            <p class="font-semibold text-lg">${{ .MarketCap }}</p>
+        </div>
+        <div>
+            <p class="text-sm text-gray-300">Total Supply</p>
+            <p class="font-semibold text-lg">{{ .TotalSupply }}</p>
+        </div>
+        <div>
+            <p class="text-sm text-gray-300">24h Volume</p>
+            <p class="font-semibold text-lg">${{ .Volume24h }}</p>
+        </div>
+        <div>
+            <p class="text-sm text-gray-300">Pooled WETH</p>
+            <p class="font-semibold text-lg">{{ .PooledWETH }}</p>
+        </div>
+        <div>
+            <p class="text-sm text-gray-300">Pooled Token</p>
+            <p class="font-semibold text-lg">{{ .PooledToken }}</p>
+        </div>
+        <div class="col-span-2">
+            <p class="text-sm text-gray-300">Base Address</p>
+            <p class="font-mono break-words text-md">{{ .BaseAddress }}</p>
+        </div>
+        <div class="order-last">
+            <p class="text-sm text-gray-300">Total Transactions</p>
+            <p class="font-semibold text-lg">{{ .TotalTxCount }}</p>
+        </div>
+    </div>
+</div>
+{{end}}
