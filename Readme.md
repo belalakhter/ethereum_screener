@@ -4,7 +4,7 @@ Get realtime transactions of erc 20 token from mainnet rpc and token metadata an
 ### Features
 - Get Realtime transactions on erc token address.
 - Get Accurate token Metadata like price , pooled tokens and number of transactions.
-- Get Realtime Chart view for tokens for one second ticker in candlestick view.
+- Get Chart view for tokens as per price change data in candle bars view.
 
 ## Env
 - HTTP_URL for https ethereum rpc node

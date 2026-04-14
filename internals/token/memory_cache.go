@@ -165,7 +165,11 @@ func UpdateMetadataPrice(pairAddress string, tx Tx) {
 	metadata.PriceDisplay = tx.PriceDisplay
 
 	cacheKey := "1:" + strings.ToLower(defaultWETHAddress.Hex())
-	if nativePrice, exists := loadCachedWrappedNativeUSDPrice(cacheKey); exists {
+	nativePrice, exists := loadCachedWrappedNativeUSDPrice(cacheKey)
+	if !exists {
+		nativePrice, exists = loadCachedWrappedNativeUSDPriceForAddress(defaultWETHAddress)
+	}
+	if exists {
 		priceUSD := new(big.Float).Mul(price, nativePrice)
 		metadata.PriceUSD = FormatPriceDisplay(priceUSD)
 	}

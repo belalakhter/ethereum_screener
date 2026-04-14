@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"math/big"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -33,7 +34,16 @@ type Tx struct {
 	Volume        float64
 }
 
-const transactionMakerLoadWorkers = 8
+const (
+	transactionMakerLoadWorkers = 2
+	transactionSignerCacheTTL   = time.Hour
+)
+
+var transactionSignerCache = struct {
+	mu        sync.RWMutex
+	signer    gethtypes.Signer
+	expiresAt time.Time
+}{}
 
 func GetTransactions(ctx context.Context, client *rpc.Client, httpClient *ethclient.Client, config *TransactionStreamConfig, txChan chan Tx) {
 	defer close(txChan)
@@ -163,6 +173,9 @@ func transactionUSDDisplays(config *TransactionStreamConfig, priceInWrapped, wra
 		}
 
 		cachedNativePrice, ok := loadCachedWrappedNativeUSDPrice(cacheKey)
+		if !ok && gethcommon.IsHexAddress(config.WrappedNativeAddressHex) {
+			cachedNativePrice, ok = loadCachedWrappedNativeUSDPriceForAddress(gethcommon.HexToAddress(config.WrappedNativeAddressHex))
+		}
 		if !ok || cachedNativePrice == nil || cachedNativePrice.Sign() <= 0 {
 			return "", ""
 		}
@@ -234,16 +247,14 @@ func addCommasToInteger(value string) string {
 
 func loadTransactionMakers(ctx context.Context, client *ethclient.Client, logs []gethtypes.Log) map[gethcommon.Hash]string {
 	makers := make(map[gethcommon.Hash]string)
-	if client == nil || len(logs) == 0 {
+	if client == nil || len(logs) == 0 || !transactionMakerLookupEnabled() {
 		return makers
 	}
 
-	chainID, err := client.ChainID(ctx)
-	if err != nil {
-		log.Printf("[tx] failed to load chain id for maker lookup: %v", err)
+	signer, ok := cachedTransactionSigner(ctx, client)
+	if !ok {
 		return makers
 	}
-	signer := gethtypes.LatestSignerForChainID(chainID)
 
 	seen := make(map[gethcommon.Hash]struct{}, len(logs))
 	hashes := make([]gethcommon.Hash, 0, len(logs))
@@ -296,23 +307,52 @@ func loadTransactionMakers(ctx context.Context, client *ethclient.Client, logs [
 }
 
 func loadTransactionMaker(ctx context.Context, client *ethclient.Client, hash gethcommon.Hash) string {
-	if client == nil {
+	if client == nil || !transactionMakerLookupEnabled() {
 		return ""
 	}
 
-	chainID, err := client.ChainID(ctx)
-	if err != nil {
-		log.Printf("[tx] failed to load chain id for maker lookup: %v", err)
+	signer, ok := cachedTransactionSigner(ctx, client)
+	if !ok {
 		return ""
 	}
 
-	maker, err := transactionMakerFromHash(ctx, client, gethtypes.LatestSignerForChainID(chainID), hash)
+	maker, err := transactionMakerFromHash(ctx, client, signer, hash)
 	if err != nil {
 		log.Printf("[tx] failed maker lookup hash=%s error=%v", hash.Hex(), err)
 		return ""
 	}
 
 	return maker
+}
+
+func transactionMakerLookupEnabled() bool {
+	value := strings.ToLower(strings.TrimSpace(os.Getenv("ENABLE_TRANSACTION_MAKER_LOOKUP")))
+	return value == "1" || value == "true" || value == "yes" || value == "on"
+}
+
+func cachedTransactionSigner(ctx context.Context, client *ethclient.Client) (gethtypes.Signer, bool) {
+	now := time.Now()
+	transactionSignerCache.mu.RLock()
+	signer := transactionSignerCache.signer
+	expiresAt := transactionSignerCache.expiresAt
+	transactionSignerCache.mu.RUnlock()
+	if signer != nil && now.Before(expiresAt) {
+		return signer, true
+	}
+
+	chainID, err := client.ChainID(ctx)
+	if err != nil {
+		log.Printf("[tx] failed to load chain id for maker lookup: %v", err)
+		return nil, false
+	}
+
+	signer = gethtypes.LatestSignerForChainID(chainID)
+	transactionSignerCache.mu.Lock()
+	transactionSignerCache.signer = signer
+	transactionSignerCache.expiresAt = now.Add(transactionSignerCacheTTL)
+	transactionSignerCache.mu.Unlock()
+
+	return signer, true
 }
 
 func transactionMakerFromHash(ctx context.Context, client *ethclient.Client, signer gethtypes.Signer, hash gethcommon.Hash) (string, error) {

@@ -309,7 +309,6 @@ func GetRecentTransactions(ctx context.Context, client *ethclient.Client, config
 	}
 
 	blockTimestamps := estimateChartBlockTimestamps(logs, currentBlock, time.Now().Unix())
-	makerByHash := loadTransactionMakers(ctx, client, logs)
 
 	txs := make([]Tx, 0, len(logs))
 	for i := len(logs) - 1; i >= 0; i-- {
@@ -325,7 +324,7 @@ func GetRecentTransactions(ctx context.Context, client *ethclient.Client, config
 		}
 
 		src, dst := swapLogAddresses(logItem)
-		tx, ok := buildSwapTx(config, logItem.TxHash.String(), src, dst, makerByHash[logItem.TxHash], timestamp, amount0In, amount1In, amount0Out, amount1Out)
+		tx, ok := buildSwapTx(config, logItem.TxHash.String(), src, dst, "", timestamp, amount0In, amount1In, amount0Out, amount1Out)
 		if !ok {
 			continue
 		}

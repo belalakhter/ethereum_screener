@@ -727,6 +727,10 @@ func resolveWrappedNativeUSDPrice(ctx context.Context, client *ethclient.Client,
 		log.Printf("Ignoring invalid WRAPPED_NATIVE_USD_PRICE value %q", envValue)
 	}
 
+	if cachedPrice, ok := loadCachedWrappedNativeUSDPriceForAddress(wrappedNativeAddress); ok {
+		return cachedPrice
+	}
+
 	chainID, err := client.ChainID(ctx)
 	if err != nil {
 		log.Printf("Failed to resolve chain ID for wrapped native USD price: %v", err)
@@ -878,6 +882,26 @@ func wrappedNativeUSDPriceFromPair(ctx context.Context, client *ethclient.Client
 	}
 
 	return new(big.Float).Quo(normalizedStableReserve, normalizedWrappedReserve), nil
+}
+
+func loadCachedWrappedNativeUSDPriceForAddress(wrappedNativeAddress common.Address) (*big.Float, bool) {
+	addressSuffix := ":" + strings.ToLower(wrappedNativeAddress.Hex())
+	now := time.Now()
+
+	wrappedNativeUSDPriceCache.mu.RLock()
+	defer wrappedNativeUSDPriceCache.mu.RUnlock()
+	for cacheKey, entry := range wrappedNativeUSDPriceCache.entries {
+		if !strings.HasSuffix(cacheKey, addressSuffix) {
+			continue
+		}
+		if now.After(entry.expiresAt) || entry.price == nil || entry.price.Sign() <= 0 {
+			continue
+		}
+
+		return new(big.Float).Set(entry.price), true
+	}
+
+	return nil, false
 }
 
 func loadCachedWrappedNativeUSDPrice(cacheKey string) (*big.Float, bool) {
