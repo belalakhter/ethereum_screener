@@ -1,13 +1,14 @@
+name: ethereum_screener
 services:
   ethereum_screener:
-    image: cosmtrek/air
+    build: .
+    image: ethereum_screener:latest
     container_name: ethereum_screener
     working_dir: /app
     env_file:
       - .env
     ports:
       - "8080:8080"
-    command: sh -c "sleep 5 && air -c /app/air.toml"
     volumes:
       - ./:/app
     networks:

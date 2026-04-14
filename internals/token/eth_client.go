@@ -12,11 +12,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-var http_url = os.Getenv("HTTP_URL")
-var ws_url = os.Getenv("WS_URL")
-
 func NewEthClient() *ethclient.Client {
-
+	var http_url = os.Getenv("HTTP_URL")
 	client, err := ethclient.Dial(http_url)
 	if err != nil {
 		log.Fatalf("Failed to connect to Ethereum: %v", err)
@@ -24,6 +21,7 @@ func NewEthClient() *ethclient.Client {
 	return client
 }
 func NewEthClientWS() *rpc.Client {
+	var ws_url = os.Getenv("WS_URL")
 	ctx := context.Background()
 	transport, err := transport.NewWebsocket(transport.WebsocketOptions{
 		Context: ctx,

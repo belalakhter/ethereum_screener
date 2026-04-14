@@ -5,6 +5,7 @@ go 1.23.3
 require (
 	github.com/defiweb/go-eth v0.7.0
 	github.com/ethereum/go-ethereum v1.15.11
+	github.com/joho/godotenv v1.5.1
 )
 
 require (
